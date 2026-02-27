@@ -131,50 +131,70 @@ def load_data(prefix, num_layers=1, batch_size=1, concat=True, sample_number=50,
         unlabeled_nodes = [n for n in G.nodes() if G.nodes[n]['test'] and G.nodes[n]['val']]
         class_map = convert_ndarray(class_map)
         # remove useless nodes
+        nodes_were_removed = False
         if len(unlabeled_nodes) > 0:
             G, feats, class_map = rm_useless(G, feats, class_map, unlabeled_nodes, num_layers)
+            nodes_were_removed = True
             train_nodes = [n for n in G.nodes() if not G.nodes[n]['test'] and not G.nodes[n]['val']]
             val_nodes = [n for n in G.nodes() if not G.nodes[n]['test'] and G.nodes[n]['val']]
             test_nodes = [n for n in G.nodes() if G.nodes[n]['test'] and not G.nodes[n]['val']]
-            unlabeled_nodes = [n for n in G.nodes() if G.nodes[n]['test'] and G.nodes[n]['val']]    
+            unlabeled_nodes = [n for n in G.nodes() if G.nodes[n]['test'] and G.nodes[n]['val']]
         # double check
         if len(class_map) != len(train_nodes) + len(val_nodes) + len(test_nodes) + len(unlabeled_nodes):
             raise Exception('Error: repeat node id!')
         if max([n for n in G.nodes()]) != G.number_of_nodes()-1:
             raise Exception('Error: node id out of range!')
 
-        # 5. encode topology features
+        # 5. encode topology features on the full graph (precomputed once, not per minibatch)
         start_time = time.time()
-        if os.path.exists(prefix + '-feats_t.npy'):
+        # remove self loops before topology computation and minibatching
+        G.remove_edges_from(nx.selfloop_edges(G))
+
+        # If nodes were removed, we must recompute topology features to maintain alignment
+        # Otherwise, cached features would be for the old graph structure
+        cache_exists = os.path.exists(prefix + '-feats_t.npy')
+        if cache_exists and not nodes_were_removed:
             feats_t = np.load(prefix + '-feats_t.npy')
-            generate_tf = False
+            print("Loaded cached topology features:", feats_t.shape)
+            # Verify alignment
+            if feats_t.shape[0] != G.number_of_nodes():
+                print(f"WARNING: Cached topology features ({feats_t.shape[0]} nodes) don't match graph ({G.number_of_nodes()} nodes)")
+                print("Recomputing topology features...")
+                all_nodes = list(G.nodes())
+                feats_t = get_coding_feats(G, all_nodes, sample_number)
+                np.save(prefix + '-feats_t.npy', feats_t)
+                print("Saved topology features:", feats_t.shape)
         else:
-            feats_t = None
-            generate_tf = True
-      
+            if nodes_were_removed and cache_exists:
+                print("Nodes were removed - invalidating cached topology features and recomputing...")
+            else:
+                print("Precomputing topology features on full graph (this may take a while)...")
+            all_nodes = list(G.nodes())
+            feats_t = get_coding_feats(G, all_nodes, sample_number)
+            np.save(prefix + '-feats_t.npy', feats_t)
+            print("Saved topology features:", feats_t.shape)
+
         # 6. post process
         train_ids = np.array([n for n in G.nodes() if not G.nodes[n]['val'] and not G.nodes[n]['test']])
         train_feats = feats[train_ids]
         scaler = StandardScaler()
         scaler.fit(train_feats)
         feats = scaler.transform(feats)
-        if not generate_tf:
-            train_feats_t = feats_t[train_ids]
-            scaler.fit(train_feats_t)
-            feats_t = scaler.transform(feats_t)
+        train_feats_t = feats_t[train_ids]
+        scaler_t = StandardScaler()
+        scaler_t.fit(train_feats_t)
+        feats_t = scaler_t.transform(feats_t)
         print("load data in", "{:.5f}".format(time.time() - start_time), "seconds")
 
         # 7. minibatch
         print('start minibatch for train, val, test ...')
         start_time = time.time()
-        # remove self loops (networkx >=3.0 uses nx.selfloop_edges)
-        G.remove_edges_from(nx.selfloop_edges(G))
         train_subgraphs, train_subfeats, train_subfeats_t, train_sublabels, train_submasks = NodeMinibatchIterator(G, num_layers, \
-                    batch_size, train_nodes, feats, feats_t, class_map, concat, generate_tf, prefix, sample_number).get_subgraphs()
+                    batch_size, train_nodes, feats, feats_t, class_map, concat).get_subgraphs()
         val_subgraphs, val_subfeats, val_subfeats_t, val_sublabels, val_submasks = NodeMinibatchIterator(G, num_layers, \
-                    batch_size, val_nodes, feats, feats_t, class_map, concat, generate_tf, prefix, sample_number).get_subgraphs()
+                    batch_size, val_nodes, feats, feats_t, class_map, concat).get_subgraphs()
         test_subgraphs, test_subfeats, test_subfeats_t, test_sublabels, test_submasks = NodeMinibatchIterator(G, num_layers, \
-                    batch_size, test_nodes, feats, feats_t, class_map, concat, generate_tf, prefix, sample_number).get_subgraphs()
+                    batch_size, test_nodes, feats, feats_t, class_map, concat).get_subgraphs()
         print('Done with minibatch within {:.5f} seconds, start training...'.format(time.time()-start_time))
 
     return G, train_subgraphs, train_subfeats, train_subfeats_t, train_sublabels, train_submasks, val_subgraphs, val_subfeats, \

@@ -53,9 +53,9 @@ def evaluate(g, feats, feats_t, labels, mask, model, loss_fcn, device, model_nam
         set_model_graph(model, g)
         output, _ = model_forward(model, feats, feats_t, adj=adj, model_name=model_name, train_mask=train_mask, labels=gt_labels)
         loss = loss_fcn(output[mask], labels[mask])
-        # predict = np.where(output[mask].data.cpu().numpy() >= 0.5, 1, 0)
+        # Labels are now class indices (not one-hot), so no argmax needed
         predict = np.argmax(output[mask].data.cpu().numpy(), axis=1)
-        true = np.argmax(labels[mask].data.cpu().numpy(), axis=1)
+        true = labels[mask].data.cpu().numpy()  # Already class indices
         score = accuracy_score(true, predict)
         return score, loss.item()
 
@@ -176,10 +176,11 @@ def train_main(args):
     else:
         optimizer = torch.optim.Adam(base_params, lr=args.lr, weight_decay=args.weight_decay)
 
+    # Use CrossEntropyLoss for single-label multi-class classification
     if class_weights is not None:
-        loss_fcn = torch.nn.BCEWithLogitsLoss(pos_weight=class_weights)
+        loss_fcn = torch.nn.CrossEntropyLoss(weight=class_weights)
     else:
-        loss_fcn = torch.nn.BCEWithLogitsLoss()
+        loss_fcn = torch.nn.CrossEntropyLoss()
 
     # start training
     best_score, best_loss, cur_step = 0, 1000, 0
@@ -192,7 +193,9 @@ def train_main(args):
         for i in range(len(train_subgraphs)):
             feats = torch.FloatTensor(train_subfeats[idx[i]]).to(device)
             feats_t = torch.FloatTensor(train_subfeats_t[idx[i]]).to(device)
-            labels = torch.FloatTensor(train_sublabels[idx[i]]).to(device)
+            labels_onehot = torch.FloatTensor(train_sublabels[idx[i]]).to(device)
+            # Convert one-hot labels to class indices for CrossEntropyLoss
+            labels = torch.argmax(labels_onehot, dim=1)
             set_model_graph(model, train_subgraphs[idx[i]])
             output, auxiliary_output = model_forward(model, feats, feats_t, model_name=args.model)
 
@@ -217,7 +220,9 @@ def train_main(args):
         for i in range(len(val_subgraphs)):
             feats = torch.FloatTensor(val_subfeats[i]).to(device)
             feats_t = torch.FloatTensor(val_subfeats_t[i]).to(device)
-            labels = torch.FloatTensor(val_sublabels[i]).to(device)
+            labels_onehot = torch.FloatTensor(val_sublabels[i]).to(device)
+            # Convert one-hot labels to class indices for CrossEntropyLoss
+            labels = torch.argmax(labels_onehot, dim=1)
 
             score, val_loss = evaluate(val_subgraphs[i],
                                         feats,
@@ -263,7 +268,9 @@ def train_main(args):
     for i in range(len(test_subgraphs)):
         feats = torch.FloatTensor(test_subfeats[i]).to(device)
         feats_t = torch.FloatTensor(test_subfeats_t[i]).to(device)
-        labels = torch.FloatTensor(test_sublabels[i]).to(device)
+        labels_onehot = torch.FloatTensor(test_sublabels[i]).to(device)
+        # Convert one-hot labels to class indices for CrossEntropyLoss
+        labels = torch.argmax(labels_onehot, dim=1)
 
         test_score, test_loss = evaluate(test_subgraphs[i],
                                 feats,

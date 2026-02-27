@@ -140,15 +140,15 @@ class GraphTopoAttention(nn.Module):
                     return {"smooth_e": diff * w}
                 self.g.apply_edges(_edge_smooth)
                 if self.g.num_edges() > 0:
-                    # Mean of signed edge losses, then abs() for valid penalty
-                    smooth_loss = self.g.edata["smooth_e"].mean().abs()
+                    # Mean of signed edge losses (can be negative for sharpening when signed_smooth=True)
+                    smooth_loss = self.g.edata["smooth_e"].mean()
                 else:
                     smooth_loss = fused.new_tensor(0.0)
             else:
                 # Topology-alignment smoothness
-                # When signed_smooth=True: lam in [-1,1], so term can be negative (rewards divergence)
-                # Take mean of weighted divergences, then abs() to make it a valid penalty
-                smooth_loss = (lam * (fused - t_proj).pow(2)).mean().abs()
+                # When signed_smooth=True: lam in [-1,1], so term can be negative (rewards divergence / sharpening)
+                # Negative smooth_loss will decrease total loss, rewarding feature divergence on heterophilic edges
+                smooth_loss = (lam * (fused - t_proj).pow(2)).mean()
         else:
             smooth_loss = ret.new_tensor(0.0)
         if self.return_smooth:
@@ -427,7 +427,17 @@ class GAT(nn.Module):
                  attn_drop=0.0,
                  residual=False):
         super(GAT, self).__init__()
+
+        # Convert NetworkX graph to DGL if necessary
+        if not isinstance(g, dgl.DGLGraph):
+            g = dgl.from_networkx(g)
+
         self.g = g
+
+        # GAT requires self-loops for proper attention computation
+        # Add self-loops if they don't exist
+        if not self.g.has_edges_between(self.g.nodes(), self.g.nodes()).all():
+            self.g = dgl.add_self_loop(self.g)
         self.num_layers = num_layers
         self.activation = activation
         self.dropout = nn.Dropout(feat_drop)
