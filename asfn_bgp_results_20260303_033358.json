@@ -1,0 +1,70 @@
+{
+  "model": "asfn",
+  "dataset": "bgp",
+  "timestamp": "2026-03-03T03:33:58.289134",
+  "hyperparameters": {
+    "num_hidden": 32,
+    "num_layers": 2,
+    "num_heads": 1,
+    "lr": 0.01,
+    "in_drop": 0.3,
+    "attn_drop": 0.3,
+    "smooth_lambda": 0.05,
+    "batch_size": 512,
+    "epochs": 50,
+    "patience": 50
+  },
+  "bgp_flags": [
+    "--class-weighted"
+  ],
+  "summary": {
+    "mean_accuracy": 0.59487,
+    "std_accuracy": 0.011497308380660225,
+    "min_accuracy": 0.5741,
+    "max_accuracy": 0.6083,
+    "num_experiments": 10,
+    "num_failed": 0
+  },
+  "results": [
+    {
+      "seed": 42,
+      "test_accuracy": 0.5966
+    },
+    {
+      "seed": 123,
+      "test_accuracy": 0.6083
+    },
+    {
+      "seed": 256,
+      "test_accuracy": 0.5741
+    },
+    {
+      "seed": 512,
+      "test_accuracy": 0.5886
+    },
+    {
+      "seed": 1024,
+      "test_accuracy": 0.5788
+    },
+    {
+      "seed": 2048,
+      "test_accuracy": 0.6077
+    },
+    {
+      "seed": 3407,
+      "test_accuracy": 0.6016
+    },
+    {
+      "seed": 4096,
+      "test_accuracy": 0.6077
+    },
+    {
+      "seed": 7777,
+      "test_accuracy": 0.5962
+    },
+    {
+      "seed": 9999,
+      "test_accuracy": 0.5891
+    }
+  ]
+}

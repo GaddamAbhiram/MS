@@ -1,0 +1,70 @@
+{
+  "model": "softgnn",
+  "dataset": "bgp",
+  "timestamp": "2026-03-05T01:07:58.023187",
+  "hyperparameters": {
+    "num_hidden": 32,
+    "num_layers": 2,
+    "lr": 0.01,
+    "in_drop": 0.3,
+    "softgnn_feat_drop": 0.3,
+    "softgnn_attn_dim": 16,
+    "batch_size": 512,
+    "smooth_lambda": 0.05,
+    "epochs": 50,
+    "patience": 50
+  },
+  "bgp_flags": [
+    "--class-weighted"
+  ],
+  "summary": {
+    "mean_accuracy": 0.59275,
+    "std_accuracy": 0.017847983079328594,
+    "min_accuracy": 0.5644,
+    "max_accuracy": 0.6145,
+    "num_experiments": 10,
+    "num_failed": 0
+  },
+  "results": [
+    {
+      "seed": 42,
+      "test_accuracy": 0.5743
+    },
+    {
+      "seed": 123,
+      "test_accuracy": 0.6087
+    },
+    {
+      "seed": 256,
+      "test_accuracy": 0.5946
+    },
+    {
+      "seed": 512,
+      "test_accuracy": 0.6145
+    },
+    {
+      "seed": 1024,
+      "test_accuracy": 0.5644
+    },
+    {
+      "seed": 2048,
+      "test_accuracy": 0.61
+    },
+    {
+      "seed": 3407,
+      "test_accuracy": 0.5932
+    },
+    {
+      "seed": 4096,
+      "test_accuracy": 0.6139
+    },
+    {
+      "seed": 7777,
+      "test_accuracy": 0.5827
+    },
+    {
+      "seed": 9999,
+      "test_accuracy": 0.5712
+    }
+  ]
+}

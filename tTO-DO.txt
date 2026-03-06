@@ -1,0 +1,16 @@
+ w/o Global-Local Fusion
+This requires a code change since there's no flag to skip it. You'd need to bypass the global_conv + context_gate and feed h directly to readout. I can add a --no-global-fusion flag if you want.
+
+Adding a --no-fusion-gate flag that falls back to plain concatenation (like GTN does) — this directly tests the fusion gate
+
+
+Ablation	Novel Component	Flag needed
+w/o Adaptive Smoothness	Per-node gated topology-alignment loss	--smooth-lambda 0.0 (exists)
+w/o Fusion Gate	Learned σ(W·[h,t]) blending	--no-fusion-gate (needs adding)
+w/o Global-Local Fusion	Gated local + GraphConv global	--no-global-fusion (needs adding)
+
+MAYBE : Layer-wise Smoothness Decay — stronger alignment in early layers, more flexibility in deeper layers	No decay (all layers equal)	--smooth-decay 1.0 is already the baseline, so test with 0.5 and 0.0
+
+
+
+w/o Signed smoothness on BGP

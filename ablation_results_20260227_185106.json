@@ -1,0 +1,37 @@
+[
+  {
+    "ablation": "Full ASFN (Baseline)",
+    "test_loss": 0.3066,
+    "test_acc": 0.9223
+  },
+  {
+    "ablation": "w/o Fusion Gate",
+    "test_loss": 0.2579,
+    "test_acc": 0.9309
+  },
+  {
+    "ablation": "w/o Adaptive Smoothness",
+    "test_loss": 0.3945,
+    "test_acc": 0.9108
+  },
+  {
+    "ablation": "w/o Topology Encodings",
+    "test_loss": 0.367,
+    "test_acc": 0.9132
+  },
+  {
+    "ablation": "w/o Smooth Decay (decay=0)",
+    "test_loss": 0.3477,
+    "test_acc": 0.9149
+  },
+  {
+    "ablation": "w/o Global-Local Fusion",
+    "test_loss": 0.2904,
+    "test_acc": 0.9202
+  },
+  {
+    "ablation": "w/ Smooth Decay 0.75",
+    "test_loss": 0.299,
+    "test_acc": 0.9159
+  }
+]
